@@ -366,7 +366,7 @@ def p0_func(theta, nwalkers=None, delta=0.01):
   return np.array(p0)
 
 
-def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1):
+def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
   '''
   Running Monte-Carlo-Markov-Chain method.
 
@@ -385,7 +385,7 @@ def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1):
 
   ndim = len(theta)
 
-  sampler = emcee.EnsembleSampler(nwalkers, ndim, myphoebe.lnprob)
+  sampler = emcee.EnsembleSampler(nwalkers, ndim, myphoebe.lnprob, **kwarg)
 
   print("Running production...")
   t1 = time.time()
