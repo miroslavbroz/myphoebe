@@ -6,6 +6,10 @@ from multiprocessing import Pool
 from myphoebe import *
 
 def main():
+  '''
+  Test OpenMP parallelisation (1 node, 1 cpu, >threads).
+
+  '''
 
   myphoebe = Myphoebe()
 

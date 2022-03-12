@@ -197,7 +197,7 @@ class Myphoebe(object):
     '''
     self.ysyn = self.model(theta)
     self.chi = ((self.yobs - self.ysyn)/self.yerr)**2
-    return -0.5*np.sum(self.chi + np.log(2.0*np.pi*self.yerr**2))
+    return -0.5*np.sum(self.chi + np.log(self.yerr**2) + np.log(2.0*np.pi))
 
   def lnprior(self, theta):
     '''
@@ -205,6 +205,7 @@ class Myphoebe(object):
 
     :param theta: Vector of free parameters.
     :return:
+
     '''
     T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0 = theta
 
@@ -237,82 +238,82 @@ class Myphoebe(object):
         return -np.inf
     return lp + self.lnlike(theta)
 
+  def initial_parameters():
+    '''
+    Setting of initial parameters
 
-def initial_parameters():
+    :return theta: Vector of free parameters.
+
+    '''
+    T1    = 29368.0   # K
+    T2    = 25119.0   # K
+    R1    = 14.0      # R_Sol
+    R2    = 4.1507    # R_Sol
+    I     = 77.5175   # deg
+    S     = 1.01419   # 1
+    M1    = 25.1647   # M_Sol
+    M2    = 8.4338    # M_Sol
+    e     = 0.08915   # 1
+    omega = 157.6877  # deg
+    gamma = 17.48     # km/s
+    T0    = -0.428699 # d
+
+    theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
+    return theta
+
+  def lower_bounds(self):
+    '''
+    Lower bounds for nlopt.
+
+    :return theta: Vector of free parameters.
+
+    '''
+    T1    = 25000
+    T2    = 20000
+    R1    = 10
+    R2    = 2
+    I     = 65
+    S     = 0.9
+    M1    = 18
+    M2    = 3
+    e     = 0
+    omega = 90
+    gamma = 0
+    T0    = -0.52
+
+    theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
+    return theta
+
+  def upper_bounds():
+    '''
+    Upper bounds for nlopt.
+
+    :return theta: Vector of free parameters.
+
+    '''
+    T1    = 30000
+    T2    = 30000
+    R1    = 20
+    R2    = 10
+    I     = 89
+    S     = 1.1
+    M1    = 35
+    M2    = 20
+    e     = 0.2
+    omega = 180
+    gamma = 35
+    T0    = -0.32
+
+    theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
+    return theta
+
+
+def run_nlopt(myphoebe, algorithm=nlopt.LN_NELDERMEAD, ftol=1e-6, maxeval=100):
   '''
-  Setting of initial parameters
-
-  :return theta: Vector of free parameters.
-
-  '''
-  T1    = 29368.0   # K
-  T2    = 25119.0   # K
-  R1    = 14.0      # R_Sol
-  R2    = 4.1507    # R_Sol
-  I     = 77.5175   # deg
-  S     = 1.01419   # 1
-  M1    = 25.1647   # M_Sol
-  M2    = 8.4338    # M_Sol
-  e     = 0.08915   # 1
-  omega = 157.6877  # deg
-  gamma = 17.48     # km/s
-  T0    = -0.428699 # d
-
-  theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
-  return theta
-
-def lower_bounds():
-  '''
-  Lower bounds for nlopt.
-
-  :return theta: Vector of free parameters.
-
-  '''
-  T1    = 25000
-  T2    = 20000
-  R1    = 10
-  R2    = 2
-  I     = 65
-  S     = 0.9
-  M1    = 18
-  M2    = 3
-  e     = 0
-  omega = 90
-  gamma = 0
-  T0    = -0.52
-
-  theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
-  return theta
-
-def upper_bounds():
-  '''
-  Upper bounds for nlopt.
-
-  :return theta: Vector of free parameters.
-
-  '''
-  T1    = 30000
-  T2    = 30000
-  R1    = 20
-  R2    = 10
-  I     = 89
-  S     = 1.1
-  M1    = 35
-  M2    = 20
-  e     = 0.2
-  omega = 180
-  gamma = 35
-  T0    = -0.32
-
-  theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
-  return theta
-
-
-def run_nlopt(myphoebe, ftol=1e-6, maxeval=100):
-  '''
-  Run nlopt.
+  Run optimisation.
 
   :param myphoebe: Ref. to myphoebe object.
+  :param algorithm: Algorithm, e.g., nlopt.LN_NELDERMEAD, nlopt.LN_SBPLX, ...
   :param ftol: Tolerance to stop.
   :param maxeval: Maximum number of evaluations.
   :return:
@@ -322,17 +323,16 @@ def run_nlopt(myphoebe, ftol=1e-6, maxeval=100):
   def myfunc(theta, grad):
     return myphoebe.chi2(theta)
 
-  theta = initial_parameters()
+  theta = myphoebe.initial_parameters()
 
   dim = len(theta)
-  #opt = nlopt.opt(nlopt.LN_SBPLX, dim)
-  opt = nlopt.opt(nlopt.LN_NELDERMEAD, dim)
+  opt = nlopt.opt(algorithm, dim)
 
   print('Number of dimensions:', opt.get_dimension())
   print('Algorithm:', opt.get_algorithm_name())
 
-  opt.set_lower_bounds(lower_bounds())
-  opt.set_upper_bounds(upper_bounds())
+  opt.set_lower_bounds(myphoebe.lower_bounds())
+  opt.set_upper_bounds(myphoebe.upper_bounds())
 
   opt.set_ftol_rel(ftol)
   opt.set_maxeval(maxeval)
@@ -353,6 +353,8 @@ def p0_func(theta, nwalkers=None, delta=0.01):
   Creating initial positions of walkers.
 
   :param theta: Vector of free parameters.
+  :param nwalkers: Number of walkers.
+  :param delta: Dispesion of random numbers.
   :return:
 
   '''
@@ -374,11 +376,12 @@ def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
   :param nwalkers: Number of walkers; minimum is 2 times the number of free parameters.
   :param niter: Number of iterations.
   :param seed: Random seed.
-  :param thin: Use only every thin steps from the chain.
+  :param thin: Use only every thin step from the chain.
   :return:
 
   '''
-  theta = initial_parameters()
+  theta = myphoebe.initial_parameters()
+  print('theta = ', theta)
 
   np.random.seed(seed)
   p0 = p0_func(theta, nwalkers=nwalkers)
@@ -397,22 +400,24 @@ def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
 
     pos, prob, state = sampler.run_mcmc(None, 1, progress=True)
 
-    print('prob = ', prob)
-    with open(f'prob.txt', 'a') as f:
-      f.write("\n")
-      np.savetxt(f, prob, fmt='%22.16f', newline=' ', delimiter='')
+    with open(f'chain.tmp', 'a') as f:
+      for j in range(0,len(pos)):
+        f.write("%d %d" % (i, j))
+        for k in range(0,len(pos[j])):
+          f.write(" %22.16f" % (pos[j][k]))
+        f.write("\n")
+
+    with open(f'prob.tmp', 'a') as f:
+      for j in range(0,len(prob)):
+        f.write("%d %d %16.8f\n" % (i, j, prob[j]))
 
     k = 0
-    for j in pos.T:
+    for tmp in pos.T:
       if k < len(pos[0]):
-        k+=1
+        k += 1
       with open(f'pos{k}.txt', 'a') as f:
         f.write("\n")
-        np.savetxt(f, j, fmt='%22.16f', newline=' ', delimiter='')  
-
-    with open(f'chain.txt', 'a') as f:
-      f.write("\n")
-      np.savetxt(f, pos, fmt='%22.16f', newline=' ', delimiter=',')
+        np.savetxt(f, tmp, fmt='%22.16f', newline=' ', delimiter='')  
 
   print("Average acceptance fraction:", np.around(np.mean(sampler.acceptance_fraction),3), "(it should be between 0.2-0.5)")
   try:
@@ -422,15 +427,14 @@ def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
      print("Warning: Autocorrelation time can not be reliably estimated!")
 
   samples = sampler.flatchain
-  theta_max = samples[np.argmax(sampler.flatlnprobability)]
-  samples_chain = sampler.get_chain(thin=thin, flat=True, discard=0)
+  theta_maxprob = samples[np.argmax(sampler.flatlnprobability)]
+  chain = sampler.get_chain(thin=thin, flat=True, discard=0)
+
+  np.savetxt('theta_maxprob.csv', theta_maxprob, delimiter=',')
+  np.savetxt('chain.csv', chain, delimiter=',')
 
   t2 = time.time()
   print("Time: ", t2-t1, " s = ", (t2-t1)/3600.0, " h")
-
-  np.savetxt('prob.csv', prob, delimiter=',')
-  np.savetxt('theta_max.csv', theta_max, delimiter=',')
-  np.savetxt('samples_chain.csv', samples_chain, delimiter=',')
 
   print('run_mcmc() has ended sucessfully!')
 
@@ -442,7 +446,7 @@ def main():
 
   myphoebe = Myphoebe()
 
-  theta = initial_parameters()
+  theta = myphoebe.initial_parameters()
 
 #  myphoebe.model(theta)
 #  myphoebe.plot_forward_model()
