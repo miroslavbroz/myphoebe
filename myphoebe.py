@@ -181,8 +181,11 @@ class Myphoebe(object):
     self.ysyn = self.model(theta)
     self.chi  = ((self.yobs - self.ysyn)/self.yerr)**2
     chi_sum   = np.sum(self.chi)
+
     if np.isnan(chi_sum):
-      print('Warning!! chi_sum = nan')
+      ids = np.where(~np.isnan(self.chi))
+      chi_sum = np.sum(self.chi[ids])
+      print('Warning!! self.chi = nan; number_of_nans = ', len(self.chi)-len(ids[0]))
 
     if self.debug:
       print('chi_sum = ', chi_sum)
@@ -197,7 +200,7 @@ class Myphoebe(object):
 
   def lnlike(self, theta):
     '''
-    Likelihood -ln p(data|theta).
+    Likelihood +ln p(data|theta).
 
     :param theta: Vector of free parameters.
     :return:
@@ -205,11 +208,15 @@ class Myphoebe(object):
     '''
     self.ysyn = self.model(theta)
     self.chi = ((self.yobs - self.ysyn)/self.yerr)**2
-    return -0.5*np.sum(self.chi + np.log(self.yerr**2) + np.log(2.0*np.pi))
+    ids = np.where(~np.isnan(self.chi))
+    lp = -0.5*np.sum(self.chi[ids] + np.log(self.yerr[ids]**2) + np.log(2.0*np.pi))
+    return lp
 
   def lnprior(self, theta):
     '''
-    Prior -ln p(theta). Uninformative; assures appropriate ranges.
+    Prior +ln p(theta). Uninformative; assures appropriate ranges.
+
+    Note: without a normalisation of p!
 
     :param theta: Vector of free parameters.
     :return:
