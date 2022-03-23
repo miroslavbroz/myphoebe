@@ -2,7 +2,7 @@
 # coding: utf-8
 
 __author__ = "Alzbeta Oplitilova (Betsimsim@seznam.cz)"
-__version__ = "Mar 11th 2022"
+__version__ = "Mar 17th 2022"
 
 import sys
 import time
@@ -28,22 +28,25 @@ class Myphoebe(object):
     self.debug = debug
 
     # Input data
-    tb, mb_obs, mb_err = np.loadtxt('blue-ready-to-fit_test.dat', unpack=True, usecols=[0, 1, 2])
-    tr, mr_obs, mr_err = np.loadtxt('red-ready-to-fit_test.dat', unpack=True, usecols=[0, 1, 2])
-    t1, rv1_obs, rv1_err = np.loadtxt('rv1-ready-to-fit_test.dat', unpack=True, usecols=[0, 1, 2])
-    t2, rv2_obs, rv2_err = np.loadtxt('rv2-ready-to-fit_test.dat', unpack=True, usecols=[0, 1, 2])
+    tb, mb_obs, mb_err, nb     = np.loadtxt('BRITE_BLUE_1LC.dat', unpack=True, usecols=[0, 1, 2, 4])
+    tr, mr_obs, mr_err, nr     = np.loadtxt('BRITE_RED_1LC.dat', unpack=True, usecols=[0, 1, 2, 4])
+    t1, rv1_obs, rv1_err, nrv1 = np.loadtxt('RV1.dat', unpack=True, usecols=[0, 1, 2, 4])
+    t2, rv2_obs, rv2_err, nrv2 = np.loadtxt('RV2.dat', unpack=True, usecols=[0, 1, 2, 4])
+
 
     fluxb_obs = 10.0**(-0.4*mb_obs)
     fluxr_obs = 10.0**(-0.4*mr_obs)
-    fluxb_err = fluxb_obs*np.log10(10.0)*0.4*mb_err  # ERROR!
-    fluxr_err = fluxr_obs*np.log10(10.0)*0.4*mr_err  # ERROR!
+    fluxb_err = fluxb_obs*(10**(0.4*mb_err)-1)
+    fluxr_err = fluxr_obs*(10**(0.4*mr_err)-1)
 
     # Single vector(s)
-    self.x = np.r_[tb, tr, t1, t2]
-    self.yobs = np.r_[fluxb_obs, fluxr_obs, rv1_obs, rv2_obs]
-    self.yerr = np.r_[fluxb_err, fluxr_err, rv1_err, rv2_err]
-    self.ysyn = None
-    self.chi = None
+    self.x       = np.r_[tb, tr, t1, t2]
+    self.yobs    = np.r_[fluxb_obs, fluxr_obs, rv1_obs, rv2_obs]
+    self.yerr    = np.r_[fluxb_err, fluxr_err, rv1_err, rv2_err]
+    self.dataset = np.r_[nb, nr, nrv1, nrv2]
+    self.ysyn    = None
+    self.chi     = None
+
 
     logger = phoebe.logger('error', filename='mylog.log')
 
@@ -58,7 +61,9 @@ class Myphoebe(object):
     self.b['ntriangles@secondary'] = 500
 
     # Fixed parameters
-    self.b.set_value('period', component='binary', value=5.73245103*u.d)
+#    self.b.set_value('t0_supconj', 2457733.8493*u.d)
+    self.b.set_value('period', component='binary', value=5.732436*u.d)
+    self.b.set_value('dperdt', component='binary', value=1.45*u.deg/u.yr)
 
     self.b.set_value('l3_mode', 'fraction', dataset='lcB')
     self.b.set_value('l3_mode', 'fraction', dataset='lcR')
@@ -124,7 +129,7 @@ class Myphoebe(object):
     :return:
 
     '''
-    T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0 = theta
+    T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0 = theta
 
     self.b.set_value('ecc',        component='binary',    value=e)
     self.b.set_value('per0',       component='binary',    value=omega*u.deg)
@@ -145,9 +150,10 @@ class Myphoebe(object):
     rv1_syn =   self.b['rvs@primary@rv1@latest@model'].value
     rv2_syn =   self.b['rvs@secondary@rv2@latest@model'].value
 
+
     # Normalisation
-    fluxb_nor = S*fluxb_syn/np.amax(fluxb_syn)
-    fluxr_nor = S*fluxr_syn/np.amax(fluxr_syn)
+    fluxb_nor = SB*fluxb_syn/np.amax(fluxb_syn)
+    fluxr_nor = SA*fluxr_syn/np.amax(fluxr_syn)
 
     # Save model
     if self.debug:
@@ -173,8 +179,10 @@ class Myphoebe(object):
       print('theta = ', theta)
 
     self.ysyn = self.model(theta)
-    self.chi = ((self.yobs - self.ysyn)/self.yerr)**2
-    chi_sum = np.sum(self.chi)
+    self.chi  = ((self.yobs - self.ysyn)/self.yerr)**2
+    chi_sum   = np.sum(self.chi)
+    if np.isnan(chi_sum):
+      print('Warning!! chi_sum = nan')
 
     if self.debug:
       print('chi_sum = ', chi_sum)
@@ -207,20 +215,21 @@ class Myphoebe(object):
     :return:
 
     '''
-    T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0 = theta
+    T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0 = theta
 
     if  25000 < T1    < 35000 and \
         20000 < T2    < 30000 and \
         10    < R1    < 20    and \
         2     < R2    < 10    and \
         65    < I     < 89    and \
-        0.9   < S     < 1.1   and \
+        0.9   < SA    < 1.1   and \
+        0.9   < SB    < 1.1   and \
         18    < M1    < 35    and \
         3     < M2    < 20    and \
         0     < e     < 0.2   and \
         90    < omega < 180   and \
         0     < gamma < 35    and \
-        -0.52 < T0    < -0.32:
+        2457733.8493-0.2 < T0 < 2457733.8493+0.2:
       return 0.0
     else:
       return -np.inf
@@ -238,27 +247,28 @@ class Myphoebe(object):
         return -np.inf
     return lp + self.lnlike(theta)
 
-  def initial_parameters():
+  def initial_parameters(self):
     '''
     Setting of initial parameters
 
     :return theta: Vector of free parameters.
 
     '''
-    T1    = 29368.0   # K
-    T2    = 25119.0   # K
-    R1    = 14.0      # R_Sol
-    R2    = 4.1507    # R_Sol
-    I     = 77.5175   # deg
-    S     = 1.01419   # 1
-    M1    = 25.1647   # M_Sol
-    M2    = 8.4338    # M_Sol
-    e     = 0.08915   # 1
-    omega = 157.6877  # deg
-    gamma = 17.48     # km/s
-    T0    = -0.428699 # d
+    T1    = 29368.0       # K
+    T2    = 25119.0       # K
+    R1    = 14.0          # R_Sol
+    R2    = 4.1507        # R_Sol
+    I     = 77.5175       # deg
+    SA    = 1.01419       # 1
+    SB    = 1.01419       # 1
+    M1    = 25.1647       # M_Sol
+    M2    = 8.4338        # M_Sol
+    e     = 0.08915       # 1
+    omega = 157.6877      # deg
+    gamma = 17.48         # km/s
+    T0    = 2457733.8493  # d
 
-    theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
+    theta = T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0
     return theta
 
   def lower_bounds(self):
@@ -273,18 +283,19 @@ class Myphoebe(object):
     R1    = 10
     R2    = 2
     I     = 65
-    S     = 0.9
+    SA    = 0.9
+    SB    = 0.9
     M1    = 18
     M2    = 3
     e     = 0
     omega = 90
     gamma = 0
-    T0    = -0.52
+    T0    = 2457733.8493-0.2
 
-    theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
+    theta = T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0
     return theta
 
-  def upper_bounds():
+  def upper_bounds(self):
     '''
     Upper bounds for nlopt.
 
@@ -296,15 +307,16 @@ class Myphoebe(object):
     R1    = 20
     R2    = 10
     I     = 89
-    S     = 1.1
+    SA    = 1.1
+    SB    = 1.1
     M1    = 35
     M2    = 20
     e     = 0.2
     omega = 180
     gamma = 35
-    T0    = -0.32
+    T0    = 2457733.8493+0.2
 
-    theta = T1,T2,R1,R2,I,S,M1,M2,e,omega,gamma,T0
+    theta = T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0
     return theta
 
 
@@ -417,7 +429,7 @@ def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
         k += 1
       with open(f'pos{k}.txt', 'a') as f:
         f.write("\n")
-        np.savetxt(f, tmp, fmt='%22.16f', newline=' ', delimiter='')  
+        np.savetxt(f, tmp, fmt='%22.16f', newline=' ', delimiter='')
 
   print("Average acceptance fraction:", np.around(np.mean(sampler.acceptance_fraction),3), "(it should be between 0.2-0.5)")
   try:
@@ -448,10 +460,10 @@ def main():
 
   theta = myphoebe.initial_parameters()
 
-#  myphoebe.model(theta)
-#  myphoebe.plot_forward_model()
+  myphoebe.model(theta)
+  #myphoebe.plot_forward_model()
 
-#  run_nlopt(myphoebe)
+  run_nlopt(myphoebe)
 
   run_mcmc(myphoebe)
 

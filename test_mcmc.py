@@ -22,7 +22,7 @@ class Myphoebe2(Myphoebe):
 
   def lnlike(self, theta):
     '''
-    f .. nuisance parameters for underestimated uncertainties (yerr)
+    Note: f .. nuisance parameter for underestimated uncertainties (self.yerr).
 
     '''
     a, b, f = theta
@@ -32,6 +32,10 @@ class Myphoebe2(Myphoebe):
     return -0.5*np.sum(self.chi + np.log(s2) + np.log(2.0*np.pi))
 
   def lnprior(self, theta):
+    '''
+    Note: without a normalisation of p!
+
+    '''
     a, b, f = theta
     if 0.1 < a < 2.0 and 0.0 < b < 2.0 and 0.5 < f < 5.0:
         return 0.0
