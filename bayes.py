@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 bayes.py
@@ -18,7 +18,7 @@ def minus_ln_likelihood(params, x, y, sigma):
     model = a*x + b
     s2 = (f*sigma)**2
     J = 0.5*np.sum((y-model)**2/s2 + np.log(s2) + np.log(2.0*np.pi))
-    print "J = ", J
+    print("J = ", J)
     return J
 
 def minus_ln_prior(params):
@@ -27,7 +27,7 @@ def minus_ln_prior(params):
     if 0.1 < a < 2.0 and 0.0 < b < 2.0 and 0.5 < f < 5.0:
         return 0.0
     else:
-        return -np.inf
+        return np.inf
 
 def ln_posterior(params, x, y, sigma):
     """Posterior ln p(a,b,f|x_i,y_i,sigma_i)"""
@@ -47,7 +47,7 @@ def main():
     result = scipy.optimize.minimize(lambda *args: minus_ln_likelihood(*args), \
         [a,b,f], args=(x,y,sigma), method='Nelder-Mead', tol=1.0e-4)
     a, b, f = result.x
-    print result
+    print(result)
 
     ndim = 3
     walkers = 32
@@ -84,9 +84,9 @@ def main():
 
     a, b, f = map(lambda x: (x[1], x[2]-x[1], x[0]-x[1]), \
         zip(*np.percentile(samples, [16,50,84], axis=0)))
-    print "a = ", a
-    print "b = ", b
-    print "f = ", f
+    print("a = ", a)
+    print("b = ", b)
+    print("f = ", f)
 
 if __name__ == "__main__":
     main()
