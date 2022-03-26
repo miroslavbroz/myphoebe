@@ -2,7 +2,11 @@
 A few examples regarding the usage of git:
 
   git init
+  git config --global user.name "Miroslav Broz"
+  git config --global user.email miroslav.broz@email.cz
   git add .
+  http://github.com/
+  New Repository
   git remote add origin https://miroslavbroz@github.com/miroslavbroz/myphoebe.git
   git push -u origin master
   git push origin master
@@ -11,5 +15,9 @@ A few examples regarding the usage of git:
   git log
   git ls-files
   git rebase -i HEAD~4
+
+  git clone https://miroslavbroz@github.com/miroslavbroz/myphoebe.git
+  git pull origin master
+  ...
 
 
