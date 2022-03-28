@@ -2,7 +2,7 @@
 # coding: utf-8
 
 __author__ = "Alzbeta Oplitilova (Betsimsim@seznam.cz)"
-__version__ = "Mar 17th 2022"
+__version__ = "Mar 27th 2022"
 
 import sys
 import time
@@ -33,11 +33,16 @@ class Myphoebe(object):
     t1, rv1_obs, rv1_err, nrv1 = np.loadtxt('RV1.dat', unpack=True, usecols=[0, 1, 2, 4])
     t2, rv2_obs, rv2_err, nrv2 = np.loadtxt('RV2.dat', unpack=True, usecols=[0, 1, 2, 4])
 
-
     fluxb_obs = 10.0**(-0.4*mb_obs)
     fluxr_obs = 10.0**(-0.4*mr_obs)
     fluxb_err = fluxb_obs*(10**(0.4*mb_err)-1)
     fluxr_err = fluxr_obs*(10**(0.4*mr_err)-1)
+
+    # Errors multiplied by factors
+    fluxb_err *= 5.0
+    fluxr_err *= 5.0
+    rv1_err   *= 5.0
+    rv2_err   *= 5.0
 
     # Single vector(s)
     self.x       = np.r_[tb, tr, t1, t2]
@@ -47,8 +52,7 @@ class Myphoebe(object):
     self.ysyn    = None
     self.chi     = None
 
-
-    logger = phoebe.logger('error', filename='mylog.log')
+    #logger = phoebe.logger('error', filename='mylog.log')
 
     self.b = phoebe.default_binary()
 
@@ -61,7 +65,6 @@ class Myphoebe(object):
     self.b['ntriangles@secondary'] = 500
 
     # Fixed parameters
-#    self.b.set_value('t0_supconj', 2457733.8493*u.d)
     self.b.set_value('period', component='binary', value=5.732436*u.d)
     self.b.set_value('dperdt', component='binary', value=1.45*u.deg/u.yr)
 
@@ -150,7 +153,6 @@ class Myphoebe(object):
     rv1_syn =   self.b['rvs@primary@rv1@latest@model'].value
     rv2_syn =   self.b['rvs@secondary@rv2@latest@model'].value
 
-
     # Normalisation
     fluxb_nor = SB*fluxb_syn/np.amax(fluxb_syn)
     fluxr_nor = SA*fluxr_syn/np.amax(fluxr_syn)
@@ -212,35 +214,6 @@ class Myphoebe(object):
     lp = -0.5*np.sum(self.chi[ids] + np.log(self.yerr[ids]**2) + np.log(2.0*np.pi))
     return lp
 
-  def lnprior(self, theta):
-    '''
-    Prior +ln p(theta). Uninformative; assures appropriate ranges.
-
-    Note: without a normalisation of p!
-
-    :param theta: Vector of free parameters.
-    :return:
-
-    '''
-    T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0 = theta
-
-    if  25000 < T1    < 35000 and \
-        20000 < T2    < 30000 and \
-        10    < R1    < 20    and \
-        2     < R2    < 10    and \
-        65    < I     < 89    and \
-        0.9   < SA    < 1.1   and \
-        0.9   < SB    < 1.1   and \
-        18    < M1    < 35    and \
-        3     < M2    < 20    and \
-        0     < e     < 0.2   and \
-        90    < omega < 180   and \
-        0     < gamma < 35    and \
-        2457733.8493-0.2 < T0 < 2457733.8493+0.2:
-      return 0.0
-    else:
-      return -np.inf
-
   def lnprob(self, theta):
     '''
     Posterior ln p(theta|data).
@@ -261,22 +234,50 @@ class Myphoebe(object):
     :return theta: Vector of free parameters.
 
     '''
-    T1    = 29368.0       # K
-    T2    = 25119.0       # K
-    R1    = 14.0          # R_Sol
-    R2    = 4.1507        # R_Sol
-    I     = 77.5175       # deg
-    SA    = 1.01419       # 1
-    SB    = 1.01419       # 1
-    M1    = 25.1647       # M_Sol
-    M2    = 8.4338        # M_Sol
-    e     = 0.08915       # 1
-    omega = 157.6877      # deg
-    gamma = 17.48         # km/s
-    T0    = 2457733.8493  # d
+    T1    = 27079.6426382378776907   # K
+    T2    = 20552.4815083548928669   # K
+    R1    = 13.1663789959952737      # R_Sol
+    R2    = 3.6039403332388154       # R_Sol
+    I     = 78.1049308527768176      # deg
+    SA    = 1.0249448696383365       # 1
+    SB    = 1.0248439302418371       # 1
+    M1    = 19.0667494072232557      # M_Sol
+    M2    = 8.7267490024371455       # M_Sol
+    e     = 0.0833289241132385       # 1
+    omega = 135.3312671389984700     # deg
+    gamma = 0.0129483125049389       # km/s
+    T0    = 2457733.8295454075559974 # d
 
     theta = T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0
     return theta
+
+  def lnprior(self, theta):
+    '''
+    Prior +ln p(theta). Uninformative; assures appropriate ranges.
+    Note: without a normalisation of p!
+
+    :param theta: Vector of free parameters.
+    :return:
+
+    '''
+    T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0 = theta
+
+    if  25000 < T1    < 35000 and \
+        15000 < T2    < 30000 and \
+        10    < R1    < 20    and \
+        2     < R2    < 10    and \
+        65    < I     < 89    and \
+        0.9   < SA    < 1.2   and \
+        0.9   < SB    < 1.2   and \
+        15    < M1    < 35    and \
+        3     < M2    < 20    and \
+        0     < e     < 0.2   and \
+        90    < omega < 180   and \
+        -5    < gamma < 35    and \
+        2457733.8493-0.2 < T0 < 2457733.8493+0.2:
+      return 0.0
+    else:
+      return -np.inf
 
   def lower_bounds(self):
     '''
@@ -326,8 +327,7 @@ class Myphoebe(object):
     theta = T1,T2,R1,R2,I,SA,SB,M1,M2,e,omega,gamma,T0
     return theta
 
-
-def run_nlopt(myphoebe, algorithm=nlopt.LN_NELDERMEAD, ftol=1e-6, maxeval=100):
+def run_nlopt(myphoebe, algorithm=nlopt.LN_NELDERMEAD, ftol=1e-6, maxeval=1000):
   '''
   Run optimisation.
 
@@ -359,7 +359,6 @@ def run_nlopt(myphoebe, algorithm=nlopt.LN_NELDERMEAD, ftol=1e-6, maxeval=100):
 
   best_fit_theta = opt.optimize(theta)
   best_fit_chi2 = opt.last_optimum_value()
-
   print('Result code: ', opt.last_optimize_result())
 
   np.savetxt('best_fit.csv', np.r_[best_fit_chi2,best_fit_theta], delimiter=',', header='best_fit_chi2,best_fit_theta')
@@ -367,7 +366,7 @@ def run_nlopt(myphoebe, algorithm=nlopt.LN_NELDERMEAD, ftol=1e-6, maxeval=100):
   print('run_nlopt() has ended sucessfully!')
 
 
-def p0_func(theta, nwalkers=None, delta=0.01):
+def p0_func(theta, nwalkers=None, delta=0.1):
   '''
   Creating initial positions of walkers.
 
@@ -381,13 +380,16 @@ def p0_func(theta, nwalkers=None, delta=0.01):
   for i in range(nwalkers):
     tmp = []
     for j in range(len(theta)):
-      tmp.append(np.random.normal(theta[j], delta))
+      if j == 12:
+        tmp.append(np.random.uniform(theta[j]-0.001, theta[j]+0.001))  # T0
+      else:
+        tmp.append(np.random.uniform(theta[j]*(1.0-delta), theta[j]*(1.0+delta)))
     p0.append(tmp)
 
   return np.array(p0)
 
 
-def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
+def run_mcmc(myphoebe, nwalkers=30, niter=1000, seed=1, thin=1, **kwarg):
   '''
   Running Monte-Carlo-Markov-Chain method.
 
@@ -457,6 +459,7 @@ def run_mcmc(myphoebe, nwalkers=25, niter=1000, seed=1, thin=1, **kwarg):
 
   print('run_mcmc() has ended sucessfully!')
 
+
 def main():
   '''
   Main program.
@@ -467,12 +470,10 @@ def main():
 
   theta = myphoebe.initial_parameters()
 
-  myphoebe.model(theta)
-  #myphoebe.plot_forward_model()
+  myphoebe.chi2(theta)
 
-  run_nlopt(myphoebe)
-
-  run_mcmc(myphoebe)
+#  run_nlopt(myphoebe)
+#  run_mcmc(myphoebe)
 
 #  print(vars(myphoebe))  # dbg
 
