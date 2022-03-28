@@ -181,8 +181,8 @@ class Myphoebe(object):
       print('theta = ', theta)
 
     self.ysyn = self.model(theta)
-    self.chi  = ((self.yobs - self.ysyn)/self.yerr)**2
-    chi_sum   = np.sum(self.chi)
+    self.chi = ((self.yobs - self.ysyn)/self.yerr)**2
+    chi_sum = np.sum(self.chi)
 
     if np.isnan(chi_sum):
       ids = np.where(~np.isnan(self.chi))
@@ -193,7 +193,7 @@ class Myphoebe(object):
       print('chi_sum = ', chi_sum)
 
       f = open(f'chi2_func.tmp', 'a')
-      f.write("%16.8f %d " % (chi_sum, len(self.yobs)))
+      f.write("%16.8f %d " % (chi_sum, len(ids[0])))
       for tmp in theta: f.write(" %22.16f" % tmp)
       f.write("\n")
       f.close()
@@ -212,6 +212,17 @@ class Myphoebe(object):
     self.chi = ((self.yobs - self.ysyn)/self.yerr)**2
     ids = np.where(~np.isnan(self.chi))
     lp = -0.5*np.sum(self.chi[ids] + np.log(self.yerr[ids]**2) + np.log(2.0*np.pi))
+
+    if self.debug:
+      chi_sum = np.sum(self.chi[ids])
+      print('chi_sum = ', chi_sum, ' lp = ', lp)
+
+      f = open(f'chi2_func.tmp', 'a')
+      f.write("%16.8f %d " % (chi_sum, len(ids[0])))
+      for tmp in theta: f.write(" %22.16f" % tmp)
+      f.write("\n")
+      f.close()
+
     return lp
 
   def lnprob(self, theta):
@@ -366,7 +377,7 @@ def run_nlopt(myphoebe, algorithm=nlopt.LN_NELDERMEAD, ftol=1e-6, maxeval=1000):
   print('run_nlopt() has ended sucessfully!')
 
 
-def p0_func(theta, nwalkers=None, delta=0.1):
+def p0_func(theta, nwalkers=None, delta=0.05):
   '''
   Creating initial positions of walkers.
 
@@ -389,7 +400,7 @@ def p0_func(theta, nwalkers=None, delta=0.1):
   return np.array(p0)
 
 
-def run_mcmc(myphoebe, nwalkers=30, niter=1000, seed=1, thin=1, **kwarg):
+def run_mcmc(myphoebe, nwalkers=26, niter=1000, seed=1, thin=1, **kwarg):
   '''
   Running Monte-Carlo-Markov-Chain method.
 
@@ -406,6 +417,14 @@ def run_mcmc(myphoebe, nwalkers=30, niter=1000, seed=1, thin=1, **kwarg):
 
   np.random.seed(seed)
   p0 = p0_func(theta, nwalkers=nwalkers)
+
+  print('Checking p0:')
+  for tmp in p0:
+    lp = myphoebe.lnprior(tmp)
+    print('lp = ', lp)
+    if not np.isfinite(lp):
+      print('theta = ', np.array(tmp))
+      raise ValueError('p0 out of range in self.lnprior()')
 
   ndim = len(theta)
 
