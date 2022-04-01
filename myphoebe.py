@@ -182,12 +182,12 @@ class Myphoebe(object):
 
     self.ysyn = self.model(theta)
     self.chi = ((self.yobs - self.ysyn)/self.yerr)**2
-    chi_sum = np.sum(self.chi)
+    ids = np.where(~np.isnan(self.chi))
+    chi_sum = np.sum(self.chi[ids])
 
-    if np.isnan(chi_sum):
-      ids = np.where(~np.isnan(self.chi))
-      chi_sum = np.sum(self.chi[ids])
-      print('Warning!! self.chi = nan; number_of_nans = ', len(self.chi)-len(ids[0]))
+    nans = len(self.chi)-len(ids[0])
+    if nans != 0:
+      print('Warning!! self.chi = nan; number_of_nans = ', nans)
 
     if self.debug:
       print('chi_sum = ', chi_sum)
